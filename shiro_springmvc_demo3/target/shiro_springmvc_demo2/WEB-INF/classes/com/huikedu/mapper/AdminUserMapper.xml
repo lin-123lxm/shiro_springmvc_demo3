@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.huikedu.mapper.AdminUserMapper">
+
+    <sql id="baseList">
+          id,account,password,passwordSalt,isDisabled,isDeleted
+    </sql>
+    <!--    添加-->
+    <insert id="insert" parameterType="AdminUser" useGeneratedKeys="true" keyProperty="id">
+        insert into sys_users
+        values
+        	(null,#{account},#{password},#{passwordSalt},#{isDisabled},#{isDeleted})
+    </insert>
+
+    <!--    修改-->
+    <update id="update" parameterType="AdminUser">
+        update sys_users
+        set password=#{password}
+        <where>
+            <if test="id != null"> and id = #{id} </if>
+            <if test="account != null"> and account = #{account} </if>
+        </where>
+    </update>
+    <!--    删除 实现伪删除，修改isDelete的状态为true-->
+    <delete id="delete" parameterType="Long">
+            update  sys_users set isDeleted=true where id=#{id}
+    </delete>
+    <!-- 查询-->
+    <select id="select" parameterType="AdminUser" resultType="AdminUser">
+        select
+        <include refid="baseList"/>
+         from sys_users where
+         isDeleted=false
+         <if test="id != null">and id = #{id}</if>
+        <if test="password !=null">and password=#{password}</if>
+        <if test="account !=null"> and account=#{account}</if>
+    </select>
+<!--    分页的方法-->
+    <select id="selectByPage" parameterType="map" resultType="AdminUser">
+        select
+        <include refid="baseList"/>
+        from  sys_users where isDeleted=false
+        limit #{currPage}, #{pageSize}
+    </select>
+
+<!--    查询总记录条件-->
+    <select id="selectCount" resultType="Long">
+            select count(id) from sys_users;
+    </select>
+
+<!--    sys _user_roles 向用户角色表添加-->
+    <insert id="addAdminUserRole" parameterType="AdminUserRole">
+        insert into sys_user_roles
+			(adminUserId,roleId)
+		values
+			(#{adminUserId},#{roleId})
+    </insert>
+<!--删除用户角色表-->
+    <delete id="delAdminUserRole" parameterType="AdminUserRole">
+            delete  from  sys_user_roles where  1=1
+             <if test="roleId != null">and roleId = #{roleId} </if>
+             <if test="adminUserId != null">and adminUserId=#{adminUserId}</if>
+    </delete>
+<!--    查询当前用户的角色ID列表-->
+    <select id="selectAdminUserRole" resultType="AdminUserRole" parameterType="AdminUserRole">
+        select
+        adminUserId,
+        roleId
+         from sys_user_roles where 1=1
+        <if test="adminUserId != null">and adminUserId = #{adminUserId}</if>
+        <if test="roleId != null">and roleId = #{roleId}</if>
+    </select>
+<!--    根据ID查询-->
+    <select id="selectAdminUserById" parameterType="long" resultType="AdminUser">
+        select
+        <include refid="baseList"/>
+        from  sys_users where id=#{value}
+    </select>
+
+<!--    设为启用和禁用-->
+    <update id="updateAdminUserDisable" parameterType="AdminUser">
+        update  sys_users set isDisabled =#{isDisabled}
+        where  id=#{id}
+    </update>
+
+<!--    根据账号查询-->
+        <select id="QueryUserByName" resultType="AdminUser" parameterType="String">
+            select
+            <include refid="baseList"/>
+                    from  sys_users  where account =#{value}
+        </select>
+
+<!--   根据AdminUseId查询所有角色-->
+    <select id="findRolesById" parameterType="Long" resultType="String">
+        SELECT DISTINCT  (r.NAME) FROM sys_roles r INNER JOIN sys_user_roles ur ON r.id = ur.roleId
+        WHERE ur.adminUserId =#{value}
+    </select>
+<!--    根据AdminuserID查询所有权限-->
+    <select id="findPermissionsById" parameterType="Long" resultType="String">
+        SELECT DISTINCT  (p.permission)  FROM
+            sys_permissions  p
+            INNER JOIN sys_role_permissions rp ON rp.permissionId = p.id
+            INNER JOIN sys_roles  r ON r.id = rp.roleId
+            INNER JOIN sys_user_roles ur  ON ur.roleId = r.id
+            WHERE ur.adminUserId = #{value}
+    </select>
+
+</mapper>
